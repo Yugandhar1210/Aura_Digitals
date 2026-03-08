@@ -1,0 +1,31 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* Global styles */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-white text-gray-900 font-sans antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  @apply font-display font-bold;
+}
+
+a {
+  @apply text-primary-600 hover:text-primary-700 transition-colors duration-200;
+}
+
+button {
+  @apply transition-all duration-200;
+}
+
+/* Responsive utilities */
+@media (max-width: 640px) {
+  body {
+    @apply text-sm;
+  }
+}
