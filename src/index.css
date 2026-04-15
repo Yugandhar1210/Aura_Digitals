@@ -1,0 +1,161 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* Global styles */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Animated background for Hero */
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Floating animation */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+/* Pulse glow animation */
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(236, 72, 153, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(236, 72, 153, 0.6);
+  }
+}
+
+/* Fade in animation */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bg-animated {
+  background: linear-gradient(-45deg, #6d28d9, #7c3aed, #5b21b6, #4c1d95);
+  background-size: 400% 400%;
+  animation: gradientShift 8s ease infinite;
+}
+
+/* Hero heading floating effect */
+.hero-heading {
+  animation: fadeInUp 0.8s ease-out, float 3s ease-in-out infinite;
+  animation-delay: 0s, 0.5s;
+}
+
+/* Hero subheading fade in */
+.hero-subheading {
+  animation: fadeInUp 0.8s ease-out 0.2s both;
+}
+
+/* Hero buttons fade in and glow effect */
+.hero-buttons {
+  animation: fadeInUp 0.8s ease-out 0.4s both;
+}
+
+/* Flip Card Animation */
+@keyframes flip {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(180deg);
+  }
+}
+
+.flip-card {
+  perspective: 1000px;
+  cursor: pointer;
+  width: 100%;
+  height: 256px;
+  position: relative;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  transition: box-shadow 0.3s ease;
+}
+
+.flip-card:hover {
+  box-shadow: 0 12px 16px rgba(0, 0, 0, 0.5);
+}
+
+.flip-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.6s;
+  transform-style: preserve-3d;
+}
+
+.flip-card:hover .flip-card-inner {
+  transform: rotateY(180deg);
+}
+
+.flip-card-front,
+.flip-card-back {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 24px;
+  border-radius: 12px;
+  border: 1px solid #374151;
+}
+
+.flip-card-front {
+  background-color: #111827;
+}
+
+.flip-card-back {
+  transform: rotateY(180deg);
+  background: linear-gradient(135deg, #6d28d9, #5b21b6);
+}
+
+body {
+  @apply bg-gray-800 text-gray-100 font-sans antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  @apply font-display font-bold;
+}
+
+a {
+  @apply text-primary-600 hover:text-primary-700 transition-colors duration-200;
+}
+
+button {
+  @apply transition-all duration-200;
+}
+
+/* Responsive utilities */
+@media (max-width: 640px) {
+  body {
+    @apply text-sm;
+  }
+}
