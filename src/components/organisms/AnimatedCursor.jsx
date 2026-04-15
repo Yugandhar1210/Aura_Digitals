@@ -1,17 +1,70 @@
 import React, { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 
+const CURSOR_CIRCLES = [
+  { size: 16, opacity: 1, maxOffset: 0, smoothing: 0.3 },
+  { size: 30, opacity: 0.72, maxOffset: 14, smoothing: 0.15 },
+  { size: 10, opacity: 0.52, maxOffset: 30, smoothing: 0.1 },
+  { size: 8, opacity: 0.34, maxOffset: 48, smoothing: 0.05 },
+];
+
+const getCursorCircleStyle = (index, opacity) => {
+  if (index === 0) {
+    return {
+      opacity,
+      background:
+        "linear-gradient(135deg, #ff8c42 0%, #ec4899 50%, #3b82f6 100%)",
+      boxShadow:
+        "0 0 12px rgba(255, 140, 66, 0.6), 0 0 8px rgba(236, 72, 153, 0.4)",
+      border: "none",
+    };
+  }
+
+  if (index === 1) {
+    return {
+      opacity: 1,
+      background: "transparent",
+      border: "1px solid #000000",
+      boxShadow: "0 0 0 1px rgba(255, 255, 255, 0.12)",
+    };
+  }
+
+  if (index === 2) {
+    return {
+      opacity: 0.85,
+      background:
+        "radial-gradient(circle at 30% 30%, #ffffff 0%, #cbd5e1 75%, #94a3b8 100%)",
+      border: "none",
+      boxShadow: "0 0 10px rgba(148, 163, 184, 0.45)",
+    };
+  }
+
+  return {
+    opacity: 0.9,
+    background: "transparent",
+    border: "1.5px solid #38bdf8",
+    boxShadow: "0 0 9px rgba(56, 189, 248, 0.55)",
+  };
+};
+
 /**
  * Animated cursor with multi-colored ripple effects
  * Creates 3 different ripples on click that merge when cursor stops
  */
 const AnimatedCursor = ({ isActive = true }) => {
-  const [position, setPosition] = useState({ x: 0, y: 0 });
   const [ripples, setRipples] = useState([]);
   const [showCursor, setShowCursor] = useState(false);
   const [isCursorMoving, setIsCursorMoving] = useState(false);
+  const [circlePositions, setCirclePositions] = useState(() =>
+    CURSOR_CIRCLES.map(() => ({ x: 0, y: 0 })),
+  );
+
+  const showCursorRef = useRef(false);
   const cursorStopTimeoutRef = useRef(null);
-  const lastPositionRef = useRef({ x: 0, y: 0 });
+  const mouseTargetRef = useRef({ x: 0, y: 0 });
+  const previousMouseRef = useRef({ x: 0, y: 0, time: 0 });
+  const velocityRef = useRef({ x: 0, y: 0 });
+  const circlesRef = useRef(CURSOR_CIRCLES.map(() => ({ x: 0, y: 0 })));
 
   const rippleColors = [
     { name: "orange", hex: "#ff8c42", rgb: "255, 140, 66" },
@@ -24,7 +77,30 @@ const AnimatedCursor = ({ isActive = true }) => {
     if (!isActive) return;
 
     const handleMouseMove = (e) => {
-      setPosition({ x: e.clientX, y: e.clientY });
+      const now = performance.now();
+      const prev = previousMouseRef.current;
+
+      if (prev.time > 0) {
+        const dt = Math.max(now - prev.time, 1);
+        velocityRef.current = {
+          x: (e.clientX - prev.x) / dt,
+          y: (e.clientY - prev.y) / dt,
+        };
+      }
+
+      previousMouseRef.current = { x: e.clientX, y: e.clientY, time: now };
+      mouseTargetRef.current = { x: e.clientX, y: e.clientY };
+
+      if (!showCursorRef.current) {
+        const initialPositions = CURSOR_CIRCLES.map(() => ({
+          x: e.clientX,
+          y: e.clientY,
+        }));
+        circlesRef.current = initialPositions;
+        setCirclePositions(initialPositions);
+      }
+
+      showCursorRef.current = true;
       setShowCursor(true);
       setIsCursorMoving(true);
 
@@ -36,14 +112,15 @@ const AnimatedCursor = ({ isActive = true }) => {
       // Set timeout to detect when cursor stops
       cursorStopTimeoutRef.current = setTimeout(() => {
         setIsCursorMoving(false);
-      }, 500);
-
-      lastPositionRef.current = { x: e.clientX, y: e.clientY };
+      }, 120);
     };
 
     const handleMouseLeave = () => {
+      showCursorRef.current = false;
       setShowCursor(false);
       setIsCursorMoving(false);
+      velocityRef.current = { x: 0, y: 0 };
+      previousMouseRef.current = { x: 0, y: 0, time: 0 };
       if (cursorStopTimeoutRef.current) {
         clearTimeout(cursorStopTimeoutRef.current);
       }
@@ -58,6 +135,50 @@ const AnimatedCursor = ({ isActive = true }) => {
       if (cursorStopTimeoutRef.current) {
         clearTimeout(cursorStopTimeoutRef.current);
       }
+    };
+  }, [isActive]);
+
+  // Animate circles with velocity-based max offset while moving.
+  useEffect(() => {
+    if (!isActive) return;
+
+    let animationFrameId;
+
+    const animateCircles = () => {
+      const { x: targetX, y: targetY } = mouseTargetRef.current;
+      const { x: vx, y: vy } = velocityRef.current;
+      const speed = Math.hypot(vx, vy);
+      const speedFactor = Math.min(speed / 1.4, 1);
+
+      const direction =
+        speed > 0.001 ? { x: vx / speed, y: vy / speed } : { x: 0, y: 0 };
+
+      const nextPositions = circlesRef.current.map((circle, index) => {
+        const config = CURSOR_CIRCLES[index];
+        const desiredX = targetX - direction.x * config.maxOffset * speedFactor;
+        const desiredY = targetY - direction.y * config.maxOffset * speedFactor;
+
+        return {
+          x: circle.x + (desiredX - circle.x) * config.smoothing,
+          y: circle.y + (desiredY - circle.y) * config.smoothing,
+        };
+      });
+
+      circlesRef.current = nextPositions;
+      setCirclePositions(nextPositions);
+
+      velocityRef.current = {
+        x: velocityRef.current.x * 0.86,
+        y: velocityRef.current.y * 0.86,
+      };
+
+      animationFrameId = requestAnimationFrame(animateCircles);
+    };
+
+    animationFrameId = requestAnimationFrame(animateCircles);
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
     };
   }, [isActive]);
 
@@ -99,81 +220,26 @@ const AnimatedCursor = ({ isActive = true }) => {
 
   if (!isActive || !showCursor) return null;
 
-  const cursorX = position.x - 8;
-  const cursorY = position.y - 8;
-
   return (
     <>
-      {/* Animated cursor with concentric circles */}
-      <motion.div
-        className="fixed pointer-events-none z-50"
-        animate={{
-          x: cursorX,
-          y: cursorY,
-        }}
-        transition={{
-          type: "spring",
-          stiffness: 500,
-          damping: 28,
-          mass: 0.5,
-        }}
-      >
-        {/* Gradient circle cursor - 0px distance */}
-        <div
-          className="w-4 h-4 rounded-full"
-          style={{
-            background:
-              "linear-gradient(135deg, #ff8c42 0%, #ec4899 50%, #3b82f6 100%)",
-            boxShadow:
-              "0 0 12px rgba(255, 140, 66, 0.6), 0 0 8px rgba(236, 72, 153, 0.4)",
-          }}
-        />
-
-        {/* Circle at 20px distance */}
-        <div
-          className="absolute w-3 h-3 rounded-full"
-          style={{
-            left: "50%",
-            top: "-20px",
-            transform: "translateX(-50%)",
-            background:
-              "linear-gradient(135deg, #ff8c42 0%, #ec4899 50%, #3b82f6 100%)",
-            opacity: 0.7,
-            boxShadow:
-              "0 0 10px rgba(255, 140, 66, 0.5), 0 0 6px rgba(236, 72, 153, 0.3)",
-          }}
-        />
-
-        {/* Circle at 40px distance */}
-        <div
-          className="absolute w-2.5 h-2.5 rounded-full"
-          style={{
-            left: "50%",
-            top: "-40px",
-            transform: "translateX(-50%)",
-            background:
-              "linear-gradient(135deg, #ff8c42 0%, #ec4899 50%, #3b82f6 100%)",
-            opacity: 0.5,
-            boxShadow:
-              "0 0 8px rgba(255, 140, 66, 0.4), 0 0 4px rgba(236, 72, 153, 0.2)",
-          }}
-        />
-
-        {/* Circle at 60px distance */}
-        <div
-          className="absolute w-2 h-2 rounded-full"
-          style={{
-            left: "50%",
-            top: "-60px",
-            transform: "translateX(-50%)",
-            background:
-              "linear-gradient(135deg, #ff8c42 0%, #ec4899 50%, #3b82f6 100%)",
-            opacity: 0.3,
-            boxShadow:
-              "0 0 6px rgba(255, 140, 66, 0.3), 0 0 2px rgba(236, 72, 153, 0.1)",
-          }}
-        />
-      </motion.div>
+      {/* Animated cursor with dynamic trailing circles */}
+      {CURSOR_CIRCLES.map((circle, index) => {
+        const position = circlePositions[index] || { x: 0, y: 0 };
+        const visualStyle = getCursorCircleStyle(index, circle.opacity);
+        return (
+          <div
+            key={`cursor-circle-${index}`}
+            className="fixed pointer-events-none z-50 rounded-full"
+            style={{
+              width: circle.size,
+              height: circle.size,
+              left: position.x - circle.size / 2,
+              top: position.y - circle.size / 2,
+              ...visualStyle,
+            }}
+          />
+        );
+      })}
 
       {/* Ripple effects - colorful circles */}
       {ripples.map((ripple) => (
@@ -188,8 +254,8 @@ const AnimatedCursor = ({ isActive = true }) => {
           animate={
             !isCursorMoving
               ? {
-                  x: lastPositionRef.current.x - ripple.x,
-                  y: lastPositionRef.current.y - ripple.y,
+                  x: mouseTargetRef.current.x - ripple.x,
+                  y: mouseTargetRef.current.y - ripple.y,
                 }
               : {
                   x: 0,

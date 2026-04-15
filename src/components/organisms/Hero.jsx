@@ -1,21 +1,28 @@
-import React from "react";
+import React, { useRef } from "react";
 import { Heading, Text, Button } from "../atoms";
 import { WhatsAppButton } from "../molecules";
 import { useScrollToSection } from "../../hooks";
 import AnimatedCursor from "./AnimatedCursor";
+import LiquidBubbles from "./LiquidBubbles";
 
 /**
  * Hero section component
  */
 const Hero = () => {
   const scrollToSection = useScrollToSection();
+  const heroRef = useRef(null);
 
   return (
-    <section id="hero" className="bg-animated text-white py-20 md:py-32">
+    <section
+      id="hero"
+      ref={heroRef}
+      className="bg-animated relative overflow-hidden text-white py-20 md:py-32"
+    >
       {/* Animated cursor overlay */}
       <AnimatedCursor isActive={true} />
+      <LiquidBubbles hostRef={heroRef} />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="text-center max-w-4xl mx-auto">
           {/* Main heading */}
           <Heading as="h1" size="xl" className="text-white mb-6 hero-heading">
